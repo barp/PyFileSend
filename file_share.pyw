@@ -8,13 +8,14 @@ import tkFileDialog
 import ttk
 import socket
 import struct
+import threading
 
 
 def get_file_size(fileobj):
     orig = fileobj.tell()
     fileobj.seek(0, 2)
     size = fileobj.tell()
-    fileobj.seel(orig, 0)
+    fileobj.seek(orig, 0)
     return size
 
 
@@ -36,38 +37,49 @@ class FileShareDialog(object):
             filename = tkFileDialog.asksaveasfilename()
         self.filename_var.set(filename)
 
-    def start(self):
+    def start_server(self):
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind(("0.0.0.0", int(self.port_var.get())))
+        server.listen(1)
+
+        connector, remote_ip = server.accept()
+
+        with open(self.filename_var.get(), "wb") as target_file:
+            file_size = struct.unpack("<Q", connector.recv(8))[0]
+            file_recieved = 0
+            while file_recieved < file_size:
+                read_size = file_size - file_recieved if  \
+                    (file_size - file_recieved) < 4096 else 4096
+                data_recieved = connector.recv(read_size)
+                file_recieved += len(data_recieved)
+                target_file.write(data_recieved)
+
+    def start_client(self):
+        sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sender.connect((self.targethost_var.get(),
+                        int(self.port_var.get())))
+
+        with open(self.filename_var.get(), "rb") as source_file:
+            file_size = get_file_size(source_file)
+            sender.sendall(struct.pack("<Q", file_size))
+            file_sent = 0
+            while file_sent < file_size:
+                read_size = file_size - file_sent if  \
+                    (file_size - file_sent) < 4096 else 4096
+                data_to_send = source_file.read(read_size)
+                sender.sendall(data_to_send)
+                file_sent += len(data_to_send)
+
+    def worker_thread(self):
         if self.mode.get() == 'server':
-            server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server.bind(("0.0.0.0", int(self.port_var.get())))
-            server.listen(1)
-
-            connector = server.accept()
-
-            with open(self.filename_var.get(), "wb") as target_file:
-                file_size = struct.unpack("<Q", connector.recv(8))
-                file_recieved = 0
-                while file_recieved < file_size:
-                    read_size = file_size - file_recieved if  \
-                        (file_size - file_recieved) < 4096 else 4096
-                    data_recieved = connector.recv(read_size)
-                    file_recieved += len(data_recieved)
-                    target_file.write(data_recieved)
+            self.start_server()
         else:
-            sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sender.connect((self.targethost_var.get(),
-                            int(self.port_var.get())))
+            self.start_client()
 
-            with open(self.filename_var.get(), "rb") as source_file:
-                file_size = get_file_size(source_file)
-                sender.sendall(struct.pack("<Q", file_size))
-                file_sent = 0
-                while file_sent < file_size:
-                    read_size = file_size - file_sent if  \
-                        (file_size - file_sent) < 4096 else 4096
-                    data_to_send = source_file.read(read_size)
-                    sender.sendall(data_to_send)
-                    file_sent += len(data_to_send)
+    def start(self, *args):
+        # TODO do this in another thread
+        work_thread = threading.Thread(target=self.worker_thread)
+        work_thread.start()
 
     def init_gui(self):
         self.root = Tk()
