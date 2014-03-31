@@ -33,14 +33,18 @@ class FileShareDialog(object):
     def do_update(self):
         if self._finished_download:
             tkMessageBox.showinfo('Download Finished', 'Download Finished')
+            self.disable_form(False)
             self._finished_download = False
 
-    def mode_changed(self):
-        self.filename_var.set("")
+    def do_mode_change(self):
         if self.mode.get() == 'server':
             self.targethost_entry.config(state=DISABLED)
         else:
             self.targethost_entry.config(state=NORMAL)
+
+    def mode_changed(self):
+        self.filename_var.set("")
+        self.do_mode_change()
 
     def browse(self):
         if self.mode.get() == 'client':
@@ -89,11 +93,21 @@ class FileShareDialog(object):
             self.start_client()
         self._finished_download = True
 
+    def disable_form(self, disable):
+        disable = DISABLED if disable else NORMAL
+        self.targethost_entry.config(state=disable)
+        self.server_mode.config(state=disable)
+        self.client_mode.config(state=disable)
+        self.port_entry.config(state=disable)
+        self.filename_entry.config(state=disable)
+        self.browse_button.config(state=disable)
+        self.start_button.config(state=disable)
+        self.do_mode_change()
+
     def start(self, *args):
-        # TODO disable textboxes
+        self.disable_form(True)
         work_thread = threading.Thread(target=self.worker_thread)
         work_thread.start()
-        # TODO add finished send/download event handler
 
     def init_gui(self):
         self.root = Tk()
