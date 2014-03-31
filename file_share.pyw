@@ -5,6 +5,7 @@ from Tkinter import NORMAL
 from Tkinter import N, W, E, S
 from Tkinter import StringVar
 import tkFileDialog
+import tkMessageBox
 import ttk
 import socket
 import struct
@@ -22,6 +23,17 @@ def get_file_size(fileobj):
 class FileShareDialog(object):
     def __init__(self):
         self.init_gui()
+        self._finished_download = False
+        self.root.after(100, self.update)
+
+    def update(self):
+        self.do_update()
+        self.root.after(100, self.update)
+
+    def do_update(self):
+        if self._finished_download:
+            tkMessageBox.showinfo('Download Finished', 'Download Finished')
+            self._finished_download = False
 
     def mode_changed(self):
         self.filename_var.set("")
@@ -75,11 +87,13 @@ class FileShareDialog(object):
             self.start_server()
         else:
             self.start_client()
+        self._finished_download = True
 
     def start(self, *args):
-        # TODO do this in another thread
+        # TODO disable textboxes
         work_thread = threading.Thread(target=self.worker_thread)
         work_thread.start()
+        # TODO add finished send/download event handler
 
     def init_gui(self):
         self.root = Tk()
