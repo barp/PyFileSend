@@ -1,5 +1,7 @@
 #!/usr/bin/python
 from Tkinter import Tk
+from Tkinter import Toplevel
+from Tkinter import Frame
 from Tkinter import DISABLED
 from Tkinter import NORMAL
 from Tkinter import N, W, E, S
@@ -18,6 +20,42 @@ def get_file_size(fileobj):
     size = fileobj.tell()
     fileobj.seek(orig, 0)
     return size
+
+
+class SendStatusDialog(Toplevel):
+
+    def __init__(self, parent, title=None):
+        super(Toplevel, self).__init__(self, parent)
+        self.transient(parent)
+
+        if title:
+            self.title(title)
+
+        self.parent = parent
+
+        body = Frame(self)
+        self.initial_focus = self.body(body)
+
+        body.pack(padx=5, pady=5)
+
+        self.grab_set()
+
+        self.protocol("WM_DELETE_WINDOW", self.cancel)
+
+        self.geometry("+%d+%d" % (parent.winfo_rootx() + 50,
+                                  parent.winfo_rooty() + 50))
+
+        self.initial_focus.focus_set()
+
+        self.wait_window(self)
+
+    def body(self, master):
+        # Build the body and return the widget with the intial focus
+        return self
+
+    def cancel(self, event=None):
+        self.parent.focus_set()
+        self.destroy()
 
 
 class FileShareDialog(object):
@@ -169,13 +207,13 @@ class FileShareDialog(object):
         # Bind Enter to start the transfer
         root.bind('<Return>', self.start)
 
-    def mainloop(self):
+    def run(self):
         self.root.mainloop()
 
 
 def main():
     file_share_dialog = FileShareDialog()
-    file_share_dialog.mainloop()
+    file_share_dialog.run()
 
 if __name__ == '__main__':
     main()
