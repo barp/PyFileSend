@@ -47,8 +47,6 @@ class SendStatusDialog(Toplevel):
 
         self.initial_focus.focus_set()
 
-        self.wait_window(self)
-
     def body(self, master):
         # Build the body and return the widget with the intial focus
         return self
@@ -56,6 +54,9 @@ class SendStatusDialog(Toplevel):
     def cancel(self, event=None):
         self.parent.focus_set()
         self.destroy()
+
+    def wait(self):
+        self.wait_window(self)
 
 
 class FileShareDialog(object):
