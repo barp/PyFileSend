@@ -33,17 +33,17 @@ class SendStatusDialog(Toplevel):
             self.title(title)
 
         self.parent = parent
-        self.progress = IntVar()
+        self.progress_var = IntVar()
+        self.download_speed_var = StringVar()
 
         self.resizable(0, 0)
 
-        body = ttk.Frame(self, padding="3 3 12 12")
-        self.initial_focus = self.body(body)
+        body = ttk.Frame(self, padding="3 3 3 3")
 
         body.grid(column=0, row=0, sticky=(N, W, E, S))
         body.columnconfigure(0, weight=1)
         body.rowconfigure(0, weight=1)
-        #body.pack(padx=2, pady=2)
+        self.initial_focus = self.body(body)
 
         self.grab_set()
 
@@ -57,8 +57,13 @@ class SendStatusDialog(Toplevel):
     def body(self, master):
         # Build the body and return the widget with the intial focus
         ttk.Progressbar(master, mode='determinate',
-                        variable=self.progress,
+                        variable=self.progress_var,
                         length=200).grid(row=0, column=0)
+        ttk.Label(master,
+                  textvariable=self.download_speed_var).grid(row=0, column=1)
+        ttk.Button(master,
+                   text="Cancel", command=self.cancel).grid(row=0, column=2)
+        self.download_speed_var.set("0 KB/s")
         return self
 
     def cancel(self, event=None):
@@ -158,7 +163,10 @@ class FileShareDialog(object):
         work_thread = threading.Thread(target=self.worker_thread)
         work_thread.start()
 
-        send_dialog = SendStatusDialog(self.root, title="Test")
+        title = "Sending..." if self.mode.get() != 'server' else "Recieving..."
+        send_dialog = \
+            SendStatusDialog(self.root,
+                             title=title)
         send_dialog.wait()
 
     def init_gui(self):
