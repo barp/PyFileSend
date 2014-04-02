@@ -1,11 +1,12 @@
 #!/usr/bin/python
 from Tkinter import Tk
 from Tkinter import Toplevel
-from Tkinter import Frame
+#from Tkinter import Frame
 from Tkinter import DISABLED
 from Tkinter import NORMAL
 from Tkinter import N, W, E, S
 from Tkinter import StringVar
+from Tkinter import IntVar
 import tkFileDialog
 import tkMessageBox
 import ttk
@@ -25,18 +26,24 @@ def get_file_size(fileobj):
 class SendStatusDialog(Toplevel):
 
     def __init__(self, parent, title=None):
-        super(Toplevel, self).__init__(self, parent)
+        Toplevel.__init__(self, parent)
         self.transient(parent)
 
         if title:
             self.title(title)
 
         self.parent = parent
+        self.progress = IntVar()
 
-        body = Frame(self)
+        self.resizable(0, 0)
+
+        body = ttk.Frame(self, padding="3 3 12 12")
         self.initial_focus = self.body(body)
 
-        body.pack(padx=5, pady=5)
+        body.grid(column=0, row=0, sticky=(N, W, E, S))
+        body.columnconfigure(0, weight=1)
+        body.rowconfigure(0, weight=1)
+        #body.pack(padx=2, pady=2)
 
         self.grab_set()
 
@@ -49,6 +56,9 @@ class SendStatusDialog(Toplevel):
 
     def body(self, master):
         # Build the body and return the widget with the intial focus
+        ttk.Progressbar(master, mode='determinate',
+                        variable=self.progress,
+                        length=200).grid(row=0, column=0)
         return self
 
     def cancel(self, event=None):
@@ -148,6 +158,9 @@ class FileShareDialog(object):
         work_thread = threading.Thread(target=self.worker_thread)
         work_thread.start()
 
+        send_dialog = SendStatusDialog(self.root, title="Test")
+        send_dialog.wait()
+
     def init_gui(self):
         self.root = Tk()
         root = self.root
@@ -182,7 +195,7 @@ class FileShareDialog(object):
         ttk.Label(mainframe, text="Port:").grid(column=0, row=1, sticky=E)
         self.port_entry = ttk.Entry(mainframe, textvariable=self.port_var)
         self.port_entry.grid(column=1, row=1, sticky=(E, W))
-        self.port_var.set('2000')
+        self.port_var.set("2000")
 
         # Create the filename box
         self.filename_var = StringVar()
