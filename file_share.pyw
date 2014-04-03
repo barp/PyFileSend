@@ -1,7 +1,6 @@
 #!/usr/bin/python
 from Tkinter import Tk
 from Tkinter import Toplevel
-#from Tkinter import Frame
 from Tkinter import DISABLED
 from Tkinter import NORMAL
 from Tkinter import N, W, E, S
@@ -66,6 +65,12 @@ class SendStatusDialog(Toplevel):
         self.download_speed_var.set("0 KB/s")
         return self
 
+    def update(self, precentage):
+        self.progress_var.set(precentage)
+
+    def close(self):
+        self.cancel()
+
     def cancel(self, event=None):
         self.parent.focus_set()
         self.destroy()
@@ -78,17 +83,27 @@ class FileShareDialog(object):
     def __init__(self):
         self.init_gui()
         self._finished_download = False
-        self.root.after(100, self.update)
+        self.root.after(10, self.update)
+        self.old_precentage = 0
+        self.new_precentage = 0
+        self.progress_dialog = None
 
     def update(self):
         self.do_update()
-        self.root.after(100, self.update)
+        self.root.after(10, self.update)
 
     def do_update(self):
+        if self.progress_dialog is not None \
+           and self.new_precentage > self.old_precentage:
+            self.progress_dialog.update(self.new_precentage)
+            self.new_precentage = self.old_precentage
+
         if self._finished_download:
             tkMessageBox.showinfo('Download Finished', 'Download Finished')
             self.disable_form(False)
             self._finished_download = False
+            if self.progress_dialog is not None:
+                self.progress_dialog.close()
 
     def do_mode_change(self):
         if self.mode.get() == 'server':
@@ -123,6 +138,8 @@ class FileShareDialog(object):
                 data_recieved = connector.recv(read_size)
                 file_recieved += len(data_recieved)
                 target_file.write(data_recieved)
+                self.new_precentage = \
+                    int(100 * (float(file_recieved) / file_size))
 
     def start_client(self):
         sender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -139,6 +156,7 @@ class FileShareDialog(object):
                 data_to_send = source_file.read(read_size)
                 sender.sendall(data_to_send)
                 file_sent += len(data_to_send)
+                self.new_precentage = int(100 * (float(file_sent) / file_size))
 
     def worker_thread(self):
         if self.mode.get() == 'server':
@@ -163,11 +181,13 @@ class FileShareDialog(object):
         work_thread = threading.Thread(target=self.worker_thread)
         work_thread.start()
 
+        self.new_precentage = 0
+        self.old_precentage = 0
         title = "Sending..." if self.mode.get() != 'server' else "Recieving..."
-        send_dialog = \
+        self.progress_dialog = \
             SendStatusDialog(self.root,
                              title=title)
-        send_dialog.wait()
+        #self.progress_dialog.wait()
 
     def init_gui(self):
         self.root = Tk()
