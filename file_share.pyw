@@ -69,7 +69,12 @@ class SendStatusDialog(Toplevel):
         self.progress_var.set(precentage)
 
     def update_rate(self, bytes):
-        self.download_speed_var.set("%d KB/s" % (bytes / 1024, ))
+        if bytes < 1024:
+            self.download_speed_var.set("%d B/s" % (bytes, ))
+        elif bytes / 1024 < 1024:
+            self.download_speed_var.set("%d KB/s" % (bytes / 1024, ))
+        elif bytes / (1024 * 1024) < 1024:
+            self.download_speed_var.set("%d MB/s" % (bytes / (1024 * 1024), ))
 
     def close(self):
         self.cancel()
@@ -150,6 +155,7 @@ class FileShareDialog(object):
                 data_recieved = connector.recv(read_size)
                 file_recieved += len(data_recieved)
                 target_file.write(data_recieved)
+                self.bytes_processed += len(data_recieved)
                 self.new_precentage = \
                     int(100 * (float(file_recieved) / file_size))
 
@@ -168,6 +174,7 @@ class FileShareDialog(object):
                 data_to_send = source_file.read(read_size)
                 sender.sendall(data_to_send)
                 file_sent += len(data_to_send)
+                self.bytes_processed += len(data_to_send)
                 self.new_precentage = int(100 * (float(file_sent) / file_size))
 
     def worker_thread(self):
