@@ -68,6 +68,9 @@ class SendStatusDialog(Toplevel):
     def update(self, precentage):
         self.progress_var.set(precentage)
 
+    def update_rate(self, bytes):
+        self.download_speed_var.set("%d KB/s" % (bytes / 1024, ))
+
     def close(self):
         self.cancel()
 
@@ -83,20 +86,28 @@ class FileShareDialog(object):
     def __init__(self):
         self.init_gui()
         self._finished_download = False
-        self.root.after(10, self.update)
+        self._update_rate = 10
+        self.root.after(self._update_rate, self.update)
         self.old_precentage = 0
         self.new_precentage = 0
+        self.bytes_processed = 0
+        self.updates_made = 0
         self.progress_dialog = None
 
     def update(self):
         self.do_update()
-        self.root.after(10, self.update)
+        self.root.after(self._update_rate, self.update)
 
     def do_update(self):
-        if self.progress_dialog is not None \
-           and self.new_precentage > self.old_precentage:
-            self.progress_dialog.update(self.new_precentage)
-            self.new_precentage = self.old_precentage
+        if self.progress_dialog is not None:
+            self.updates_made += 1
+            if self.new_precentage > self.old_precentage:
+                self.progress_dialog.update(self.new_precentage)
+                self.new_precentage = self.old_precentage
+            if self.updates_made * self._update_rate > 1000:
+                self.progress_dialog.update_rate(self.bytes_processed)
+                self.bytes_processed = 0
+                self.updates_made = 0
 
         if self._finished_download:
             tkMessageBox.showinfo('Download Finished', 'Download Finished')
@@ -104,6 +115,7 @@ class FileShareDialog(object):
             self._finished_download = False
             if self.progress_dialog is not None:
                 self.progress_dialog.close()
+                self.progress_dialog = None
 
     def do_mode_change(self):
         if self.mode.get() == 'server':
@@ -183,6 +195,7 @@ class FileShareDialog(object):
 
         self.new_precentage = 0
         self.old_precentage = 0
+        self.bytes_processed = 0
         title = "Sending..." if self.mode.get() != 'server' else "Recieving..."
         self.progress_dialog = \
             SendStatusDialog(self.root,
