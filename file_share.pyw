@@ -12,6 +12,7 @@ import ttk
 import socket
 import struct
 import threading
+import time
 
 
 def get_file_size(fileobj):
@@ -97,6 +98,7 @@ class FileShareDialog(object):
         self.new_precentage = 0
         self.bytes_processed = 0
         self.updates_made = 0
+        self.pre_time = 0
         self.progress_dialog = None
 
     def update(self):
@@ -110,7 +112,11 @@ class FileShareDialog(object):
                 self.progress_dialog.update(self.new_precentage)
                 self.new_precentage = self.old_precentage
             if self.updates_made * self._update_rate > 1000:
-                self.progress_dialog.update_rate(self.bytes_processed)
+                new_time = time.time()
+                self.progress_dialog.update_rate(int(self.bytes_processed
+                                                 /
+                                                 (new_time - self.pre_time)))
+                self.pre_time = new_time
                 self.bytes_processed = 0
                 self.updates_made = 0
 
@@ -198,6 +204,7 @@ class FileShareDialog(object):
     def start(self, *args):
         self.disable_form(True)
         work_thread = threading.Thread(target=self.worker_thread)
+        self.pre_time = time.time()
         work_thread.start()
 
         self.new_precentage = 0
