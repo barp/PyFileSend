@@ -293,7 +293,6 @@ class upnp:
     #Parses SSDP notify and reply packets, and populates the ENUM_HOSTS dict
     def parseSSDPInfo(self, data, showUniq, verbose):
         hostFound = False
-        foundLocation = False
         messageType = False
         xmlFile = False
         host = False
@@ -499,7 +498,6 @@ class upnp:
 
     #Display all info for a given host
     def showCompleteHostInfo(self, index, fp):
-        na = 'N/A'
         serviceKeys = ['controlURL', 'eventSubURL',
                        'serviceId', 'SCPDURL', 'fullName']
         if fp is False:
@@ -535,8 +533,11 @@ class upnp:
                                 if key == 'relatedStateVariable':
                                     fp.write('\t\t\t\t\t\t%s:\n' % val)
                                     for k, v in \
-                                            serviceStruct['serviceStateVariables'][val].iteritems():
-                                        fp.write('\t\t\t\t\t\t\t%s: %s\n' % (k, v))
+                                            serviceStruct[
+                                            'serviceStateVariables'
+                                            ][val].iteritems():
+                                        fp.write('\t\t\t\t\t\t\t%s: %s\n'
+                                                 % (k, v))
                                 else:
                                     fp.write('\t\t\t\t\t\t%s: %s\n' % (key,
                                                                        val))
@@ -582,7 +583,8 @@ class upnp:
         for device in xmlRoot.getElementsByTagName(devTag):
             try:
                 #Get the deviceType string
-                deviceTypeName = str(device.getElementsByTagName(deviceType)[0].childNodes[0].data)
+                devices_by_type = device.getElementsByTagName(deviceType)
+                deviceTypeName = str(devices_by_type[0].childNodes[0].data)
             except:
                 continue
 
@@ -591,38 +593,45 @@ class upnp:
             if not deviceDisplayName:
                 continue
 
-            #Create a new device entry for this host in the ENUM_HOSTS structure
-            deviceEntryPointer = self.ENUM_HOSTS[index][deviceListEntries][deviceDisplayName] = {}
+            #Create a new device entry for this host
+            #   in the ENUM_HOSTS structure
+            host_enum_index = self.ENUM_HOSTS[index]
+            deviceEntryPointer = host_enum_index[
+                deviceListEntries][deviceDisplayName] = {}
             deviceEntryPointer['fullName'] = deviceTypeName
 
             #Parse out all the device tags for that device
             for tag in deviceTags:
                 try:
-                    deviceEntryPointer[tag] = str(device.getElementsByTagName(tag)[0].childNodes[0].data)
-                except Exception, e:
+                    deviceEntryPointer[tag] = str(device.getElementsByTagName(
+                        tag)[0].childNodes[0].data)
+                except Exception:
                     if self.VERBOSE:
-                        print 'Device',deviceEntryPointer['fullName'],'does not have a',tag
+                        print 'Device', deviceEntryPointer['fullName'],\
+                            'does not have a', tag
                     continue
             #Get a list of all services for this device listing
-            self.parseServiceList(device,deviceEntryPointer,index)
+            self.parseServiceList(device, deviceEntryPointer, index)
 
         return
 
     #Parse the list of services specified in the XML file
-    def parseServiceList(self,xmlRoot,device,index):
+    def parseServiceList(self, xmlRoot, device, index):
         serviceEntryPointer = False
         dictName = "services"
         serviceListTag = "serviceList"
         serviceTag = "service"
         serviceNameTag = "serviceType"
-        serviceTags = ["serviceId","controlURL","eventSubURL","SCPDURL"]
+        serviceTags = ["serviceId", "controlURL", "eventSubURL", "SCPDURL"]
 
         try:
             device[dictName] = {}
             #Get a list of all services offered by this device
-            for service in xmlRoot.getElementsByTagName(serviceListTag)[0].getElementsByTagName(serviceTag):
+            for service in xmlRoot.getElementsByTagName(
+                    serviceListTag)[0].getElementsByTagName(serviceTag):
                 #Get the full service descriptor
-                serviceName = str(service.getElementsByTagName(serviceNameTag)[0].childNodes[0].data)
+                serviceName = str(service.getElementsByTagName(
+                    serviceNameTag)[0].childNodes[0].data)
 
                 #Get the service name from the service descriptor string
                 serviceDisplayName = self.parseServiceTypeName(serviceName)
@@ -635,17 +644,18 @@ class upnp:
 
                 #Get all of the required service info and add it to ENUM_HOSTS
                 for tag in serviceTags:
-                    serviceEntryPointer[tag] = str(service.getElementsByTagName(tag)[0].childNodes[0].data)
+                    serviceEntryPointer[tag] = str(
+                        service.getElementsByTagName(
+                            tag)[0].childNodes[0].data)
 
                 #Get specific service info about this service
-                self.parseServiceInfo(serviceEntryPointer,index)
+                self.parseServiceInfo(serviceEntryPointer, index)
         except Exception, e:
-            print 'Caught exception while parsing device service list:',e
+            print 'Caught exception while parsing device service list:', e
 
     #Parse details about each service (arguements, variables, etc)
-    def parseServiceInfo(self,service,index):
-        argIndex = 0
-        argTags = ['direction','relatedStateVariable']
+    def parseServiceInfo(self, service, index):
+        argTags = ['direction', 'relatedStateVariable']
         actionList = 'actionList'
         actionTag = 'action'
         nameTag = 'name'
@@ -653,8 +663,10 @@ class upnp:
         argumentTag = 'argument'
 
         #Get the full path to the service's XML file
-        xmlFile = self.ENUM_HOSTS[index]['proto'] + self.ENUM_HOSTS[index]['name']
-        if not xmlFile.endswith('/') and not service['SCPDURL'].startswith('/'):
+        xmlFile = self.ENUM_HOSTS[index]['proto']\
+            + self.ENUM_HOSTS[index]['name']
+        if not xmlFile.endswith('/')\
+                and not service['SCPDURL'].startswith('/'):
             try:
                 xmlServiceFile = self.ENUM_HOSTS[index]['xmlFile']
                 slashIndex = xmlServiceFile.rfind('/')
@@ -669,19 +681,20 @@ class upnp:
         service['actions'] = {}
 
         #Get the XML file that describes this service
-        (xmlHeaders,xmlData) = self.getXML(xmlFile)
+        xmlHeaders, xmlData = self.getXML(xmlFile)
         if not xmlData:
-            print 'Failed to retrieve service descriptor located at:',xmlFile
+            print 'Failed to retrieve service descriptor located at:', xmlFile
             return False
 
         try:
-            xmlRoot = minidom.parseString(xmlData)  
+            xmlRoot = minidom.parseString(xmlData)
 
             #Get a list of actions for this service
             try:
                 actionList = xmlRoot.getElementsByTagName(actionList)[0]
             except:
-                print 'Failed to retrieve action list for service %s!' % service['fullName']
+                print 'Failed to retrieve action list for service %s!'\
+                    % service['fullName']
                 return False
             actions = actionList.getElementsByTagName(actionTag)
             if actions == []:
@@ -691,60 +704,72 @@ class upnp:
             for action in actions:
                 #Get the action's name
                 try:
-                    actionName = str(action.getElementsByTagName(nameTag)[0].childNodes[0].data).strip()
+                    actionName = str(action.getElementsByTagName(
+                        nameTag)[0].childNodes[0].data).strip()
                 except:
-                    print 'Failed to obtain service action name (%s)!' % service['fullName']
+                    print 'Failed to obtain service action name (%s)!'\
+                        % service['fullName']
                     continue
-            
+
                 #Add the action to the ENUM_HOSTS dictonary
                 service['actions'][actionName] = {}
                 service['actions'][actionName]['arguments'] = {}
-    
+
                 #Parse all of the action's arguments
                 try:
                     argList = action.getElementsByTagName(argumentList)[0]
                 except:
-                    #Some actions may take no arguments, so continue without raising an error here...
+                    #Some actions may take no arguments,
+                    #   so continue without raising an error here...
                     continue
 
                 #Get all the arguments in this action's argument list
                 arguments = argList.getElementsByTagName(argumentTag)
                 if arguments == []:
                     if self.VERBOSE:
-                        print 'Action',actionName,'has no arguments!'
+                        print 'Action', actionName, 'has no arguments!'
                     continue
-                
-                #Loop through the action's arguments, appending them to the ENUM_HOSTS dictionary
+
+                #Loop through the action's arguments,
+                #   appending them to the ENUM_HOSTS dictionary
                 for argument in arguments:
                     try:
-                        argName = str(argument.getElementsByTagName(nameTag)[0].childNodes[0].data)
+                        argName = str(argument.getElementsByTagName(
+                            nameTag)[0].childNodes[0].data)
                     except:
-                        print 'Failed to get argument name for',actionName
+                        print 'Failed to get argument name for', actionName
                         continue
                     service['actions'][actionName]['arguments'][argName] = {}
 
-                    #Get each required argument tag value and add them to ENUM_HOSTS
+                    #Get each required argument tag
+                    #   value and add them to ENUM_HOSTS
                     for tag in argTags:
                         try:
-                            service['actions'][actionName]['arguments'][argName][tag] = str(argument.getElementsByTagName(tag)[0].childNodes[0].data)
+                            service['actions'][actionName]['arguments'][
+                                argName][tag] = str(
+                                argument.getElementsByTagName(
+                                    tag)[0].childNodes[0].data)
                         except:
-                            print 'Failed to find tag %s for argument %s!' % (tag,argName)
+                            print 'Failed to find tag %s for argument %s!'\
+                                % (tag, argName)
                             continue
 
-            #Parse all of the state variables for this service                  
-            self.parseServiceStateVars(xmlRoot,service)
+            #Parse all of the state variables for this service
+            self.parseServiceStateVars(xmlRoot, service)
 
         except Exception, e:
-            print 'Caught exception while parsing Service info for service %s: %s' % (service['fullName'],str(e))
+            print 'Caught exception while parsing'\
+                ' Service info for service %s: %s'\
+                % (service['fullName'], str(e))
             return False
 
         return True
 
     #Get info about a service's state variables
-    def parseServiceStateVars(self,xmlRoot,servicePointer):
+    def parseServiceStateVars(self, xmlRoot, servicePointer):
 
         na = 'N/A'
-        varVals = ['sendEvents','dataType','defaultValue','allowedValues']
+        varVals = ['sendEvents', 'dataType', 'defaultValue', 'allowedValues']
         serviceStateTable = 'serviceStateTable'
         stateVariable = 'stateVariable'
         nameTag = 'name'
@@ -761,9 +786,13 @@ class upnp:
 
         #Get a list of all state variables associated with this service
         try:
-            stateVars = xmlRoot.getElementsByTagName(serviceStateTable)[0].getElementsByTagName(stateVariable)
+            service_state_tables = xmlRoot.getElementsByTagName(
+                serviceStateTable)
+            stateVars = service_state_tables[0].getElementsByTagName(
+                stateVariable)
         except:
-            #Don't necessarily want to throw an error here, as there may be no service state variables
+            #Don't necessarily want to throw an error here,
+            #   as there may be no service state variables
             return False
 
         #Loop through all state variables
@@ -797,7 +826,7 @@ class upnp:
                     #Add the list of allowed values to the ENUM_HOSTS dictionary
                     for val in vals:
                         servicePointer['serviceStateVariables'][varName][allowedValueList].append(str(val.childNodes[0].data))
-                
+
                 #Get allowed value range for this variable
                 try:
                     valList = var.getElementsByTagName(allowedValueRange)[0]
@@ -855,8 +884,9 @@ class upnp:
                                     for action,actionData in serviceData['actions'].iteritems():
                                         structPtr[host][device][service][action] = None
             self.completer.commands[hostCommand][sendCommand] = structPtr
-        except Exception,e:
-            print "Error updating command completer structure; some command completion features might not work..."
+        except Exception:
+            print "Error updating command completer structure;"\
+                " some command completion features might not work..."
         return
 
 
@@ -915,7 +945,7 @@ def msearch(argc, argv, hp):
             if hp.parseSSDPInfo(hp.recv(1024, server), False, False):
                 count += 1
 
-        except Exception, e:
+        except Exception:
             print '\nDiscover mode halted...'
             break
 
@@ -939,7 +969,7 @@ def pcap(argc, argv, hp):
             if hp.parseSSDPInfo(hp.recv(1024, False), False, False):
                 count += 1
 
-        except Exception, e:
+        except Exception:
             print "\nPassive mode halted..."
             break
 
@@ -1061,7 +1091,6 @@ def set(argc, argv, hp):
 def host(argc, argv, hp):
 
     hostInfo = None
-    indexList = []
     indexError = "Host index out of range."\
                  " Try the 'host list' command to get a list of known hosts"
 
@@ -1127,17 +1156,16 @@ def host(argc, argv, hp):
                 output = output[arg]
             try:
                 for k, v in output.iteritems():
-                    try:
-                        v.has_key(False)
+                    if False not in v:
                         dataStructs.append(k)
-                    except:
-                        print k,':',v
+                    else:
+                        print k, ':', v
                         continue
             except:
                 print output
 
             for struct in dataStructs:
-                print struct,': {}'
+                print struct, ': {}'
             return
 
         elif action == 'get':
@@ -1148,25 +1176,32 @@ def host(argc, argv, hp):
                 except:
                     print indexError
                     return
-            
+
                 if hostInfo is not None:
                     #If this host data is already complete, just display it
-                    if hostInfo['dataComplete'] == True:
+                    if hostInfo['dataComplete'] is True:
                         print 'Data for this host has already been enumerated!'
                         return
 
                     try:
                         #Get extended device and service information
-                        if hostInfo != False:
-                            print "Requesting device and service info for %s (this could take a few seconds)..." % hostInfo['name']
+                        if hostInfo is not False:
+                            print "Requesting device and service info for %s"\
+                                " (this could take a few seconds)..."\
+                                % hostInfo['name']
                             print ''
-                            if hostInfo['dataComplete'] == False:
-                                (xmlHeaders,xmlData) = hp.getXML(hostInfo['xmlFile'])
-                                if xmlData == False:
-                                    print 'Failed to request host XML file:',hostInfo['xmlFile']
+                            if hostInfo['dataComplete'] is False:
+                                xmlHeaders, xmlData = hp.getXML(
+                                    hostInfo['xmlFile'])
+                                if xmlData is False:
+                                    print 'Failed to request host XML file:',\
+                                        hostInfo['xmlFile']
                                     return
-                                if hp.getHostInfo(xmlData,xmlHeaders,index) == False:
-                                    print "Failed to get device/service info for %s..." % hostInfo['name']
+                                if hp.getHostInfo(xmlData, xmlHeaders, index)\
+                                        is False:
+                                    print "Failed to get device/"\
+                                        "service info for %s..."\
+                                        % hostInfo['name']
                                     return
                             print 'Host data enumeration complete!'
                             hp.updateCmdCompleter(hp.ENUM_HOSTS)
@@ -1202,13 +1237,17 @@ def host(argc, argv, hp):
                 #Get the service control URL and full service name
                 try:
                     controlURL = hostInfo['proto'] + hostInfo['name']
-                    controlURL2 = hostInfo['deviceList'][deviceName]['services'][serviceName]['controlURL']
-                    if not controlURL.endswith('/') and not controlURL2.startswith('/'):
+                    controlURL2 =\
+                        hostInfo['deviceList'][deviceName]['services'][
+                            serviceName]['controlURL']
+                    if not controlURL.endswith('/')\
+                            and not controlURL2.startswith('/'):
                         controlURL += '/'
                     controlURL += controlURL2
-                except Exception,e:
-                    print 'Caught exception:',e
-                    print "Are you sure you've run 'host get %d' and specified the correct service name?" % index
+                except Exception, e:
+                    print 'Caught exception:', e
+                    print "Are you sure you've run 'host get %d'"\
+                        " and specified the correct service name?" % index
                     return False
 
                 #Get action info
@@ -1282,12 +1321,12 @@ def host(argc, argv, hp):
                         print tag,':',tagValue
             return
 
-
     showHelp(argv[0])
     return
 
+
 #Save data
-def save(argc,argv,hp):
+def save(argc, argv, hp):
     suffix = '%s_%s.mir'
     uniqName = ''
     saveType = ''
@@ -1325,37 +1364,38 @@ def save(argc,argv,hp):
         showHelp(argv[0])
         return
 
-    fileName = suffix % (saveType,uniqName)
+    fileName = suffix % (saveType, uniqName)
     if os.path.exists(fileName):
         print "File '%s' already exists! Please try again..." % fileName
         return
     if saveType == 'struct':
         try:
-            fp = open(fileName,'w')
-            pickle.dump(hp.ENUM_HOSTS,fp)
+            fp = open(fileName, 'w')
+            pickle.dump(hp.ENUM_HOSTS, fp)
             fp.close()
             print "Host data saved to '%s'" % fileName
         except Exception, e:
-            print 'Caught exception saving host data:',e
+            print 'Caught exception saving host data:', e
     elif saveType == 'info':
         try:
-            fp = open(fileName,'w')
-            hp.showCompleteHostInfo(index,fp)
+            fp = open(fileName, 'w')
+            hp.showCompleteHostInfo(index, fp)
             fp.close()
-            print "Host info for '%s' saved to '%s'" % (hp.ENUM_HOSTS[index]['name'],fileName)
+            print "Host info for '%s' saved to '%s'"\
+                % (hp.ENUM_HOSTS[index]['name'],
+                    fileName)
         except Exception, e:
-            print 'Failed to save host info:',e
+            print 'Failed to save host info:', e
             return
     else:
         showHelp(argv[0])
-    
-    return      
+
 
 #Load data
-def load(argc,argv,hp):
+def load(argc, argv, hp):
     if argc == 2 and argv[1] != 'help':
         loadFile = argv[1]
-    
+
         try:
             fp = open(loadFile,'r')
             hp.ENUM_HOSTS = {}
@@ -1364,45 +1404,49 @@ def load(argc,argv,hp):
             hp.updateCmdCompleter(hp.ENUM_HOSTS)
             print 'Host data restored:'
             print ''
-            host(2,['host','list'],hp)
+            host(2, ['host', 'list'], hp)
             return
         except Exception, e:
-            print 'Caught exception while restoring host data:',e
+            print 'Caught exception while restoring host data:', e
 
     showHelp(argv[0])
 
+
 #Open log file
-def log(argc,argv,hp):
+def log(argc, argv, hp):
     if argc == 2:
         logFile = argv[1]
         try:
-            fp = open(logFile,'a')
+            fp = open(logFile, 'a')
         except Exception, e:
-            print 'Failed to open %s for logging: %s' % (logFile,e)
+            print 'Failed to open %s for logging: %s' % (logFile, e)
             return
         try:
             hp.LOG_FILE = fp
             ts = []
             for x in time.localtime():
                 ts.append(x)
-            theTime = "%d-%d-%d, %d:%d:%d" % (ts[0],ts[1],ts[2],ts[3],ts[4],ts[5])
+            theTime = "%d-%d-%d, %d:%d:%d"\
+                % (ts[0], ts[1], ts[2], ts[3], ts[4], ts[5])
             hp.LOG_FILE.write("\n### Logging started at: %s ###\n" % theTime)
         except Exception, e:
-            print "Cannot write to file '%s': %s" % (logFile,e)
+            print "Cannot write to file '%s': %s" % (logFile, e)
             hp.LOG_FILE = False
             return
         print "Commands will be logged to: '%s'" % logFile
         return
     showHelp(argv[0])
 
+
 #Show help
-def help(argc,argv,hp):
+def help(argc, argv, hp):
     showHelp(False)
 
+
 #Debug, disabled by default
-def debug(argc,argv,hp):
+def debug(argc, argv, hp):
     command = ''
-    if hp.DEBUG == False:
+    if hp.DEBUG is False:
         print 'Debug is disabled! To enable, try the set command...'
         return
     if argc == 1:
@@ -1448,149 +1492,189 @@ def showHelp(command):
             'Show program help'
             },
         'quit': {
-                'longListing' :
-                    'Description:\n'\
-                        '\tQuits the interactive shell\n\n'\
-                    'Usage:\n'\
-                        '\t%s',
-                'quickView' :
-                    'Exit this shell'
+            'longListing':
+            'Description:\n'
+            '\tQuits the interactive shell\n\n'
+            'Usage:\n'
+            '\t%s',
+            'quickView':
+            'Exit this shell'
             },
-        'exit' : {
-
-                'longListing' :
-                    'Description:\n'\
-                        '\tExits the interactive shell\n\n'\
-                    'Usage:\n'\
-                        '\t%s',
-                'quickView' : 
-                    'Exit this shell'
+        'exit': {
+            'longListing':
+            'Description:\n'
+            '\tExits the interactive shell\n\n'
+            'Usage:\n'
+            '\t%s',
+            'quickView':
+            'Exit this shell'
             },
-        'save' : {
-                'longListing' :
-                    'Description:\n'\
-                        '\tSaves current host information to disk.\n\n'\
-                    'Usage:\n'\
-                        '\t%s <data | info <host#>> [file prefix]\n'\
-                        "\tSpecifying 'data' will save the raw host data to a file suitable for importing later via 'load'\n"\
-                        "\tSpecifying 'info' will save data for the specified host in a human-readable format\n"\
-                        "\tSpecifying a file prefix will save files in for format of 'struct_[prefix].mir' and info_[prefix].mir\n\n"\
-                    'Example:\n'\
-                        '\t> save data wrt54g\n'\
-                        '\t> save info 0 wrt54g\n\n'\
-                    'Notes:\n'\
-                        "\to Data files are saved as 'struct_[prefix].mir'; info files are saved as 'info_[prefix].mir.'\n"\
-                        "\to If no prefix is specified, the host index number will be used for the prefix.\n"\
-                        "\to The data saved by the 'save info' command is the same as the output of the 'host details' command.",
-                'quickView' :
-                    'Save current host data to file'
+        'save': {
+            'longListing':
+            'Description:\n'
+            '\tSaves current host information to disk.\n\n'
+            'Usage:\n'
+            '\t%s <data | info <host#>> [file prefix]\n'
+            "\tSpecifying 'data' will save the raw host data to a file"
+            " suitable for importing later via 'load'\n"
+            "\tSpecifying 'info' will save data for the specified"
+            " host in a human-readable format\n"
+            "\tSpecifying a file prefix will save files in for format"
+            " of 'struct_[prefix].mir' and info_[prefix].mir\n\n"
+            'Example:\n'
+            '\t> save data wrt54g\n'
+            '\t> save info 0 wrt54g\n\n'
+            'Notes:\n'
+            "\to Data files are saved as 'struct_[prefix].mir';"
+            " info files are saved as 'info_[prefix].mir.'\n"
+            "\to If no prefix is specified,"
+            " the host index number will be used for the prefix.\n"
+            "\to The data saved by the 'save info' command"
+            " is the same as the output of the 'host details' command.",
+            'quickView':
+            'Save current host data to file'
             },
-        'set' : {
-                'longListing' :
-                    'Description:\n'\
-                        '\tAllows you  to view and edit application settings.\n\n'\
-                    'Usage:\n'\
-                        '\t%s <show | uniq | debug | verbose | version <version #> | iface <interface> | socket <ip:port> | timeout <seconds> | max <count> >\n'\
-                        "\t'show' displays the current program settings\n"\
-                        "\t'uniq' toggles the show-only-uniq-hosts setting when discovering UPNP devices\n"\
-                        "\t'debug' toggles debug mode\n"\
-                        "\t'verbose' toggles verbose mode\n"\
-                        "\t'version' changes the UPNP version used\n"\
-                        "\t'iface' changes the network interface in use\n"\
-                        "\t'socket' re-sets the multicast IP address and port number used for UPNP discovery\n"\
-                        "\t'timeout' sets the receive timeout period for the msearch and pcap commands (default: infinite)\n"\
-                        "\t'max' sets the maximum number of hosts to locate during msearch and pcap discovery modes\n\n"\
-                    'Example:\n'\
-                        '\t> set socket 239.255.255.250:1900\n'\
-                        '\t> set uniq\n\n'\
-                    'Notes:\n'\
-                        "\tIf given no options, 'set' will display help options",
-                'quickView' :
-                    'Show/define application settings'
+        'set': {
+            'longListing':
+            'Description:\n'
+            '\tAllows you  to view and edit application settings.\n\n'
+            'Usage:\n'
+            '\t%s <show | uniq | debug | verbose | version <version #> |'
+            ' iface <interface> | socket <ip:port> | timeout <seconds>'
+            ' | max <count> >\n'
+            "\t'show' displays the current program settings\n"
+            "\t'uniq' toggles the show-only-uniq-hosts setting"
+            " when discovering UPNP devices\n"
+            "\t'debug' toggles debug mode\n"
+            "\t'verbose' toggles verbose mode\n"
+            "\t'version' changes the UPNP version used\n"
+            "\t'iface' changes the network interface in use\n"
+            "\t'socket' re-sets the multicast IP address and port"
+            " number used for UPNP discovery\n"
+            "\t'timeout' sets the receive timeout period"
+            " for the msearch and pcap commands (default: infinite)\n"
+            "\t'max' sets the maximum number of hosts to"
+            " locate during msearch and pcap discovery modes\n\n"
+            'Example:\n'
+            '\t> set socket 239.255.255.250:1900\n'
+            '\t> set uniq\n\n'
+            'Notes:\n'
+            "\tIf given no options, 'set' will display help options",
+            'quickView':
+            'Show/define application settings'
             },
-        'head' : {
-                'longListing' :
-                    'Description:\n'\
-                        '\tAllows you to view, set, add and delete the SSDP header values used in SSDP transactions\n\n'\
-                    'Usage:\n'\
-                        '\t%s <show | del <header> | set <header>  <value>>\n'\
-                        "\t'set' allows you to set SSDP headers used when sending M-SEARCH queries with the 'msearch' command\n"\
-                        "\t'del' deletes a current header from the list\n"\
-                        "\t'show' displays all current header info\n\n"\
-                    'Example:\n'\
-                        '\t> head show\n'\
-                        '\t> head set MX 3',
-                'quickView' :
-                    'Show/define SSDP headers'
+        'head': {
+            'longListing':
+            'Description:\n'
+            '\tAllows you to view, set, add and delete the SSDP'
+            ' header values used in SSDP transactions\n\n'
+            'Usage:\n'
+            '\t%s <show | del <header> | set <header>  <value>>\n'
+            "\t'set' allows you to set SSDP headers used when sending "
+            "M-SEARCH queries with the 'msearch' command\n"
+            "\t'del' deletes a current header from the list\n"
+            "\t'show' displays all current header info\n\n"
+            'Example:\n'
+            '\t> head show\n'
+            '\t> head set MX 3',
+            'quickView':
+            'Show/define SSDP headers'
             },
-        'host' : {
-                'longListing' :
-                    'Description:\n'\
-                        "\tAllows you to query host information and iteract with a host's actions/services.\n\n"\
-                    'Usage:\n'\
-                        '\t%s <list | get | info | summary | details | send> [host index #]\n'\
-                        "\t'list' displays an index of all known UPNP hosts along with their respective index numbers\n"\
-                        "\t'get' gets detailed information about the specified host\n"\
-                        "\t'details' gets and displays detailed information about the specified host\n"\
-                        "\t'summary' displays a short summary describing the specified host\n"\
-                        "\t'info' allows you to enumerate all elements of the hosts object\n"\
-                        "\t'send' allows you to send SOAP requests to devices and services *\n\n"\
-                    'Example:\n'\
-                        '\t> host list\n'\
-                        '\t> host get 0\n'\
-                        '\t> host summary 0\n'\
-                        '\t> host info 0 deviceList\n'\
-                        '\t> host send 0 <device name> <service name> <action name>\n\n'\
-                    'Notes:\n'\
-                        "\to All host commands support full tab completion of enumerated arguments\n"\
-                        "\to All host commands EXCEPT for the 'host send', 'host info' and 'host list' commands take only one argument: the host index number.\n"\
-                        "\to The host index number can be obtained by running 'host list', which takes no futher arguments.\n"\
-                        "\to The 'host send' command requires that you also specify the host's device name, service name, and action name that you wish to send,\n\t  in that order (see the last example in the Example section of this output). This information can be obtained by viewing the\n\t  'host details' listing, or by querying the host information via the 'host info' command.\n"\
-                        "\to The 'host info' command allows you to selectively enumerate the host information data structure. All data elements and their\n\t  corresponding values are displayed; a value of '{}' indicates that the element is a sub-structure that can be further enumerated\n\t  (see the 'host info' example in the Example section of this output).",
-                'quickView' :
-                    'View and send host list and host information'
+        'host': {
+            'longListing':
+            'Description:\n'
+            "\tAllows you to query host information and iteract with"
+            " a host's actions/services.\n\n"
+            'Usage:\n'
+            '\t%s <list | get | info | summary'
+            ' | details | send> [host index #]\n'
+            "\t'list' displays an index of all known UPNP hosts along with "
+            "their respective index numbers\n"
+            "\t'get' gets detailed information about the specified host\n"
+            "\t'details' gets and displays detailed information about"
+            " the specified host\n"
+            "\t'summary' displays a short "
+            "summary describing the specified host\n"
+            "\t'info' allows you to enumerate all "
+            "elements of the hosts object\n"
+            "\t'send' allows you to send SOAP requests to devices"
+            " and services *\n\n"
+            'Example:\n'
+            '\t> host list\n'
+            '\t> host get 0\n'
+            '\t> host summary 0\n'
+            '\t> host info 0 deviceList\n'
+            '\t> host send 0 <device name> <service name> <action name>\n\n'
+            'Notes:\n'
+            "\to All host commands support full tab completion "
+            "of enumerated arguments\n"
+            "\to All host commands EXCEPT for the 'host send',"
+            " 'host info' and 'host list' commands take only one argument:"
+            " the host index number.\n"
+            "\to The host index number can be obtained by running 'host list',"
+            " which takes no futher arguments.\n"
+            "\to The 'host send' command requires that you"
+            " also specify the host's device name, service name,"
+            " and action name that you wish to send,\n\t  in that order"
+            " (see the last example in the Example section of this output)."
+            " This information can be obtained by viewing the\n"
+            "\t  'host details' listing, or by querying"
+            " the host information via the 'host info' command.\n"
+            "\to The 'host info' command allows you to selectively enumerate"
+            " the host information data structure."
+            " All data elements and their\n\t  corresponding values"
+            " are displayed; a value of '{}' indicates that the element is"
+            " a sub-structure that can be further enumerated\n"
+            "\t  (see the 'host info' example in the"
+            " Example section of this output).",
+            'quickView':
+            'View and send host list and host information'
             },
-        'pcap' : {
-                'longListing' :
-                    'Description:\n'\
-                        '\tPassively listens for SSDP NOTIFY messages from UPNP devices\n\n'\
-                    'Usage:\n'\
-                        '\t%s',
-                'quickView' :
-                    'Passively listen for UPNP hosts'
+        'pcap': {
+            'longListing':
+            'Description:\n'
+            '\tPassively listens for SSDP NOTIFY'
+            ' messages from UPNP devices\n\n'
+            'Usage:\n'
+            '\t%s',
+            'quickView':
+            'Passively listen for UPNP hosts'
             },
-        'msearch' : {
-                'longListing' :
-                    'Description:\n'\
-                        '\tActively searches for UPNP hosts using M-SEARCH queries\n\n'\
-                    'Usage:\n'\
-                        "\t%s [device | service] [<device name> | <service name>]\n"\
-                        "\tIf no arguments are specified, 'msearch' searches for upnp:rootdevices\n"\
-                        "\tSpecific device/services types can be searched for using the 'device' or 'service' arguments\n\n"\
-                    'Example:\n'\
-                        '\t> msearch\n'\
-                        '\t> msearch service WANIPConnection\n'\
-                        '\t> msearch device InternetGatewayDevice',
-                'quickView' :
-                    'Actively locate UPNP hosts'
+        'msearch': {
+            'longListing':
+            'Description:\n'
+            '\tActively searches for UPNP hosts using M-SEARCH queries\n\n'
+            'Usage:\n'
+            "\t%s [device | service] [<device name> | <service name>]\n"
+            "\tIf no arguments are specified, 'msearch'"
+            " searches for upnp:rootdevices\n"
+            "\tSpecific device/services types can be searched"
+            " for using the 'device' or 'service' arguments\n\n"
+            'Example:\n'
+            '\t> msearch\n'
+            '\t> msearch service WANIPConnection\n'
+            '\t> msearch device InternetGatewayDevice',
+            'quickView':
+            'Actively locate UPNP hosts'
             },
-        'load' : {
-                'longListing' :
-                    'Description:\n'\
-                        "\tLoads host data from a struct file previously saved with the 'save data' command\n\n"\
-                    'Usage:\n'\
-                        '\t%s <file name>',
-                'quickView' :
-                    'Restore previous host data from file'
+        'load': {
+            'longListing':
+            'Description:\n'
+            "\tLoads host data from a struct file previously saved"
+            " with the 'save data' command\n\n"
+            'Usage:\n'
+            '\t%s <file name>',
+            'quickView':
+            'Restore previous host data from file'
             },
-        'log'  : {
-                'longListing' : 
-                    'Description:\n'\
-                        '\tLogs user-supplied commands to a log file\n\n'\
-                    'Usage:\n'\
-                        '\t%s <log file name>',
-                'quickView' :
-                    'Logs user-supplied commands to a log file'
+        'log': {
+            'longListing':
+            'Description:\n'
+            '\tLogs user-supplied commands to a log file\n\n'
+            'Usage:\n'
+            '\t%s <log file name>',
+            'quickView':
+            'Logs user-supplied commands to a log file'
             }
     }
 
