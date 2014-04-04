@@ -74,7 +74,7 @@ class SendStatusDialog(Toplevel):
             self.download_speed_var.set("%d B/s" % (bytes, ))
         elif bytes / 1024 < 1024:
             self.download_speed_var.set("%d KB/s" % (bytes / 1024, ))
-        elif bytes / (1024 * 1024) < 1024:
+        else:
             self.download_speed_var.set("%d MB/s" % (bytes / (1024 * 1024), ))
 
     def close(self):
