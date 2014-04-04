@@ -800,32 +800,43 @@ class upnp:
             for tag in varVals:
                 #Get variable name
                 try:
-                    varName = str(var.getElementsByTagName(nameTag)[0].childNodes[0].data)
+                    varName = str(var.getElementsByTagName(
+                        nameTag)[0].childNodes[0].data)
                 except:
-                    print 'Failed to get service state variable name for service %s!' % servicePointer['fullName']
+                    print 'Failed to get service state variable'\
+                        ' name for service %s!' % servicePointer['fullName']
                     continue
 
                 servicePointer['serviceStateVariables'][varName] = {}
+                service_state_vars_var = \
+                    servicePointer['serviceStateVariables'][varName]
                 try:
-                    servicePointer['serviceStateVariables'][varName]['dataType'] = str(var.getElementsByTagName(dataType)[0].childNodes[0].data)
+                    service_state_vars_var['dataType'] = \
+                        str(var.getElementsByTagName(
+                            dataType)[0].childNodes[0].data)
                 except:
-                    servicePointer['serviceStateVariables'][varName]['dataType'] = na
+                    service_state_vars_var['dataType'] = na
                 try:
-                    servicePointer['serviceStateVariables'][varName]['sendEvents'] = str(var.getElementsByTagName(sendEvents)[0].childNodes[0].data)
+                    service_state_vars_var['sendEvents'] = \
+                        str(var.getElementsByTagName(
+                            sendEvents)[0].childNodes[0].data)
                 except:
-                    servicePointer['serviceStateVariables'][varName]['sendEvents'] = na
+                    service_state_vars_var['sendEvents'] = na
 
-                servicePointer['serviceStateVariables'][varName][allowedValueList] = []                 
+                service_state_vars_var[allowedValueList] = []
 
                 #Get a list of allowed values for this variable
                 try:
-                    vals = var.getElementsByTagName(allowedValueList)[0].getElementsByTagName(allowedValue)
+                    vals = var.getElementsByTagName(
+                        allowedValueList)[0].getElementsByTagName(allowedValue)
                 except:
                     pass
                 else:
-                    #Add the list of allowed values to the ENUM_HOSTS dictionary
+                    #Add the list of allowed values to the
+                    #    ENUM_HOSTS dictionary
                     for val in vals:
-                        servicePointer['serviceStateVariables'][varName][allowedValueList].append(str(val.childNodes[0].data))
+                        service_state_vars_var[allowedValueList].append(
+                            str(val.childNodes[0].data))
 
                 #Get allowed value range for this variable
                 try:
@@ -834,19 +845,23 @@ class upnp:
                     pass
                 else:
                     #Add the max and min values to the ENUM_HOSTS dictionary
-                    servicePointer['serviceStateVariables'][varName][allowedValueRange] = []
+                    service_state_vars_var[allowedValueRange] = []
                     try:
-                        servicePointer['serviceStateVariables'][varName][allowedValueRange].append(str(valList.getElementsByTagName(minimum)[0].childNodes[0].data))
-                        servicePointer['serviceStateVariables'][varName][allowedValueRange].append(str(valList.getElementsByTagName(maximum)[0].childNodes[0].data))
+                        service_state_vars_var[allowedValueRange].append(
+                            str(valList.getElementsByTagName(
+                                minimum)[0].childNodes[0].data))
+                        service_state_vars_var[allowedValueRange].append(
+                            str(valList.getElementsByTagName(
+                                maximum)[0].childNodes[0].data))
                     except:
                         pass
-        return True         
+        return True
 
     #Update the command completer
-    def updateCmdCompleter(self,struct):
+    def updateCmdCompleter(self, struct):
         indexOnlyList = {
-                'host' : ['get','details','summary'],
-                'save' : ['info']
+            'host': ['get', 'details', 'summary'],
+            'save': ['info']
         }
         hostCommand = 'host'
         subCommandList = ['info']
@@ -855,34 +870,38 @@ class upnp:
         try:
             structPtr = {}
             topLevelKeys = {}
-            for key,val in struct.iteritems():
+            for key, val in struct.iteritems():
                 structPtr[str(key)] = val
                 topLevelKeys[str(key)] = None
-            
+
             #Update the subCommandList
             for subcmd in subCommandList:
                 self.completer.commands[hostCommand][subcmd] = None
                 self.completer.commands[hostCommand][subcmd] = structPtr
 
             #Update the indexOnlyList
-            for cmd,data in indexOnlyList.iteritems():
+            for cmd, data in indexOnlyList.iteritems():
                 for subcmd in data:
                     self.completer.commands[cmd][subcmd] = topLevelKeys
 
             #This is for updating the sendCommand key
             structPtr = {}
-            for hostIndex,hostData in struct.iteritems():
+            for hostIndex, hostData in struct.iteritems():
                 host = str(hostIndex)
                 structPtr[host] = {}
-                if hostData.has_key('deviceList'):
-                    for device,deviceData in hostData['deviceList'].iteritems():
+                if 'deviceList' in hostData:
+                    for device, deviceData in \
+                            hostData['deviceList'].iteritems():
                         structPtr[host][device] = {}
-                        if deviceData.has_key('services'):
-                            for service,serviceData in deviceData['services'].iteritems():
+                        if 'services' in deviceData:
+                            for service, serviceData in \
+                                    deviceData['services'].iteritems():
                                 structPtr[host][device][service] = {}
-                                if serviceData.has_key('actions'):
-                                    for action,actionData in serviceData['actions'].iteritems():
-                                        structPtr[host][device][service][action] = None
+                                if 'actions' in serviceData:
+                                    for action, actionData in \
+                                            serviceData['actions'].iteritems():
+                                        structPtr[host][device][
+                                            service][action] = None
             self.completer.commands[hostCommand][sendCommand] = structPtr
         except Exception:
             print "Error updating command completer structure;"\
@@ -1252,73 +1271,87 @@ def host(argc, argv, hp):
 
                 #Get action info
                 try:
-                    actionArgs = hostInfo['deviceList'][deviceName]['services'][serviceName]['actions'][actionName]['arguments']
-                    fullServiceName = hostInfo['deviceList'][deviceName]['services'][serviceName]['fullName']
-                except Exception,e:
-                    print 'Caught exception:',e
+                    actionArgs = hostInfo['deviceList'][deviceName][
+                        'services'][serviceName][
+                        'actions'][actionName]['arguments']
+                    fullServiceName = hostInfo['deviceList'][deviceName][
+                        'services'][serviceName]['fullName']
+                except Exception, e:
+                    print 'Caught exception:', e
                     print "Are you sure you've specified the correct action?"
                     return False
 
-                for argName,argVals in actionArgs.iteritems():
+                for argName, argVals in actionArgs.iteritems():
                     actionStateVar = argVals['relatedStateVariable']
-                    stateVar = hostInfo['deviceList'][deviceName]['services'][serviceName]['serviceStateVariables'][actionStateVar]
+                    stateVar = hostInfo['deviceList'][deviceName][
+                        'services'][serviceName][
+                        'serviceStateVariables'][actionStateVar]
 
                     if argVals['direction'].lower() == 'in':
-                        print "Required argument:" 
-                        print "\tArgument Name: ",argName
-                        print "\tData Type:     ",stateVar['dataType']
-                        if stateVar.has_key('allowedValueList'):
-                            print "\tAllowed Values:",stateVar['allowedValueList']
-                        if stateVar.has_key('allowedValueRange'):
-                            print "\tValue Min:     ",stateVar['allowedValueRange'][0]
-                            print "\tValue Max:     ",stateVar['allowedValueRange'][1]
-                        if stateVar.has_key('defaultValue'):
-                            print "\tDefault Value: ",stateVar['defaultValue']
+                        print "Required argument:"
+                        print "\tArgument Name: ", argName
+                        print "\tData Type:     ", stateVar['dataType']
+                        if 'allowedValueList' in stateVar:
+                            print "\tAllowed Values:", \
+                                stateVar['allowedValueList']
+                        if 'allowedValueRange' in stateVar:
+                            print "\tValue Min:     ", \
+                                stateVar['allowedValueRange'][0]
+                            print "\tValue Max:     ", \
+                                stateVar['allowedValueRange'][1]
+                        if 'defaultValue' in stateVar:
+                            print "\tDefault Value: ", stateVar['defaultValue']
                         prompt = "\tSet %s value to: " % argName
                         try:
                             #Get user input for the argument value
-                            (argc,argv) = getUserInput(hp,prompt)
-                            if argv == None:
+                            argc, argv = getUserInput(hp, prompt)
+                            if argv is None:
                                 print 'Stopping send request...'
                                 return
                             uInput = ''
-                            
+
                             if argc > 0:
                                 inArgCounter += 1
 
                             for val in argv:
                                 uInput += val + ' '
-                            
+
                             uInput = uInput.strip()
                             if stateVar['dataType'] == 'bin.base64' and uInput:
                                 uInput = base64.encodestring(uInput)
-    
-                            sendArgs[argName] = (uInput.strip(),stateVar['dataType'])
+
+                            sendArgs[argName] = (uInput.strip(),
+                                                 stateVar['dataType'])
                         except KeyboardInterrupt:
                             print ""
                             return
                         print ''
                     else:
-                        retTags.append((argName,stateVar['dataType']))
+                        retTags.append((argName, stateVar['dataType']))
 
-                #Remove the above inputs from the command history               
+                #Remove the above inputs from the command history
                 while inArgCounter:
                     try:
-                        readline.remove_history_item(readline.get_current_history_length()-1)
+                        readline.remove_history_item(
+                            readline.get_current_history_length()-1)
                     except:
                         pass
 
                     inArgCounter -= 1
 
                 #print 'Requesting',controlURL
-                soapResponse = hp.sendSOAP(hostInfo['name'],fullServiceName,controlURL,actionName,sendArgs)
-                if soapResponse != False:
+                soapResponse = hp.sendSOAP(hostInfo['name'],
+                                           fullServiceName,
+                                           controlURL,
+                                           actionName,
+                                           sendArgs)
+                if soapResponse is not False:
                     #It's easier to just parse this ourselves...
-                    for (tag,dataType) in retTags:
-                        tagValue = hp.extractSingleTag(soapResponse,tag)
-                        if dataType == 'bin.base64' and tagValue != None:
+                    for (tag, dataType) in retTags:
+                        tagValue = hp.extractSingleTag(soapResponse, tag)
+                        if dataType == 'bin.base64' and tagValue is not None:
                             tagValue = base64.decodestring(tagValue)
-                        print tag,':',tagValue
+                        print tag, ':', tagValue
             return
 
     showHelp(argv[0])
@@ -1397,7 +1430,7 @@ def load(argc, argv, hp):
         loadFile = argv[1]
 
         try:
-            fp = open(loadFile,'r')
+            fp = open(loadFile, 'r')
             hp.ENUM_HOSTS = {}
             hp.ENUM_HOSTS = pickle.load(fp)
             fp.close()
