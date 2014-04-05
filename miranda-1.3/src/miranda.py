@@ -11,7 +11,6 @@ import re
 import platform
 import xml.dom.minidom as minidom
 import urllib2
-import readline
 import time
 import pickle
 import struct
@@ -19,42 +18,6 @@ import base64
 import getopt
 import select
 from socket import *
-
-
-# Most of the CmdCompleter class was originally written by John Kenyan
-# It serves to tab-complete commands inside the program's shell
-class CmdCompleter:
-    def __init__(self, commands):
-        self.commands = commands
-
-    # Traverses the list of available commands
-    def traverse(self, tokens, tree):
-        retVal = []
-
-        # If there are no commands, or no user input, return null
-        if tree is None or len(tokens) == 0:
-            retVal = []
-        # If there is only one word, only auto-complete the primary commands
-        elif len(tokens) == 1:
-            retVal = [x+' ' for x in tree if x.startswith(tokens[0])]
-        # Else auto-complete for the sub-commands
-        elif tokens[0] in tree.keys():
-            retVal = self.traverse(tokens[1:], tree[tokens[0]])
-
-        return retVal
-
-    # Returns a list of possible commands that match the partial command that
-    # the user has entered
-    def complete(self, text, state):
-        try:
-            tokens = readline.get_line_buffer().split()
-            if not tokens or readline.get_line_buffer()[-1] == ' ':
-                tokens.append('')
-            results = self.traverse(tokens, self.commands) + [None]
-            return results[state]
-        except Exception, e:
-            print "Failed to complete command: %s" % str(e)
-        return
 
 
 #UPNP class for getting, sending and parsing SSDP/SOAP XML
@@ -86,8 +49,6 @@ class upnp:
     ssock = False
 
     def __init__(self, ip, port, appCommands):
-        if appCommands:
-            self.completer = CmdCompleter(appCommands)
         if self.initSockets(ip, port) is False:
             print 'UPNP class initialization failed!'
             print 'Bye!'
@@ -1305,16 +1266,6 @@ def host(argc, argv, hp):
                     else:
                         retTags.append((argName, stateVar['dataType']))
 
-                #Remove the above inputs from the command history
-                while inArgCounter:
-                    try:
-                        readline.remove_history_item(
-                            readline.get_current_history_length()-1)
-                    except:
-                        pass
-
-                    inArgCounter -= 1
-
                 #print 'Requesting',controlURL
                 soapResponse = hp.sendSOAP(hostInfo['name'],
                                            fullServiceName,
@@ -1908,10 +1859,6 @@ def main(argc, argv):
 
     #Initialize upnp class
     hp = upnp(False, False, appCommands)
-
-    #Set up tab completion and command history
-    readline.parse_and_bind("tab: complete")
-    readline.set_completer(hp.completer.complete)
 
     #Set some default values
     hp.UNIQ = True
