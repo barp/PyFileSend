@@ -10,7 +10,6 @@ import os
 import re
 import platform
 import xml.dom.minidom as minidom
-import IN
 import urllib2
 import readline
 import time
@@ -97,14 +96,12 @@ class upnp:
             self.soapEnd = re.compile('<\/.*:envelope>')
 
     #Initialize default sockets
-    def initSockets(self, ip, port, iface):
+    def initSockets(self, ip, port):
         if self.csock:
             self.csock.close()
         if self.ssock:
             self.ssock.close()
 
-        if iface is not None:
-            self.IFACE = iface
         if not ip:
             ip = self.DEFAULT_IP
         if not port:
@@ -129,16 +126,6 @@ class upnp:
                 self.ssock.setsockopt(SOL_SOCKET, SO_REUSEPORT, 1)
             except:
                 pass
-
-            #Only bind to this interface
-            if self.IFACE is not None:
-                print '\nBinding to interface', self.IFACE, '...\n'
-                self.ssock.setsockopt(SOL_SOCKET, IN.SO_BINDTODEVICE,
-                                      struct.pack("%ds" % (len(self.IFACE)+1,),
-                                                  self.IFACE))
-                self.csock.setsockopt(SOL_SOCKET, IN.SO_BINDTODEVICE,
-                                      struct.pack("%ds" % (len(self.IFACE)+1,),
-                                                  self.IFACE))
 
             try:
                 self.ssock.bind(('', self.port))
