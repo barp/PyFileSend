@@ -85,10 +85,10 @@ class upnp:
     csock = False
     ssock = False
 
-    def __init__(self, ip, port, iface, appCommands):
+    def __init__(self, ip, port, appCommands):
         if appCommands:
             self.completer = CmdCompleter(appCommands)
-        if self.initSockets(ip, port, iface) is False:
+        if self.initSockets(ip, port) is False:
             print 'UPNP class initialization failed!'
             print 'Bye!'
             sys.exit(1)
@@ -1035,17 +1035,6 @@ def set(argc, argv, hp):
             else:
                 showHelp(argv[0])
             return
-        elif action == 'iface':
-            if argc == 3:
-                hp.IFACE = argv[2]
-                print 'Interface set to %s, re-binding sockets...' % hp.IFACE
-                if hp.initSockets(hp.ip, hp.port, hp.IFACE):
-                    print 'Interface change successful!'
-                else:
-                    print 'Failed to bind new interface'
-                    print ' - are you sure you have root privilages??'
-                    hp.IFACE = None
-                return
         elif action == 'socket':
             if argc == 3:
                 try:
@@ -1054,7 +1043,7 @@ def set(argc, argv, hp):
                     hp.ip = ip
                     hp.port = port
                     hp.cleanup()
-                    if hp.initSockets(ip, port, hp.IFACE) is False:
+                    if hp.initSockets(ip, port) is False:
                         print "Setting new socket %s:%d failed!" % (ip, port)
                     else:
                         print "Using new socket: %s:%d" % (ip, port)
@@ -1790,11 +1779,6 @@ def parseCliOpts(argc, argv, hp):
                         print iface
                     print ''
                     sys.exit(1)
-                else:
-                    if not hp.initSockets(False, False, interfaceName):
-                        print 'Binding to interface %s failed;"\
-                            " are you sure you have root privilages??'\
-                                 % interfaceName
 
 
 #Toggle boolean values
@@ -1923,7 +1907,7 @@ def main(argc, argv):
         appCommands['load'][file] = None
 
     #Initialize upnp class
-    hp = upnp(False, False, None, appCommands)
+    hp = upnp(False, False, appCommands)
 
     #Set up tab completion and command history
     readline.parse_and_bind("tab: complete")
